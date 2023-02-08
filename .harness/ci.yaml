@@ -1,0 +1,65 @@
+pipeline:
+  name: Open Source App - Mastodon iOS App
+  identifier: opensourceappmastodoniosapp
+  projectIdentifier: martinansong
+  orgIdentifier: CI_Training
+  description: This pipeline is based on the 'main.yml' GitHub Actions workflow from https://github.com/mastodon/mastodon-ios
+  properties:
+    ci:
+      codebase:
+        connectorRef: github
+        repoName: mansong1/mastodon-ios
+        build: <+input>
+  stages:
+    - stage:
+        description: This stage has two steps that setup and build the iOS application.
+        identifier: ci_build
+        name: CI Build
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  identifier: setup
+                  name: Setup
+                  spec:
+                    shell: Bash
+                    command: |-
+                      cp .env.example .env
+                      exec ./.github/scripts/setup.sh
+                  type: Run
+              - step:
+                  identifier: build
+                  name: Build
+                  spec:
+                    shell: Bash
+                    command: "set -o pipefail\nxcodebuild -workspace Mastodon.xcworkspace \\\n\t-scheme Mastodon \\\n \t-destination \"platform=iOS Simulator,name=iPhone SE (3rd generation)\" \\\n\tclean \\\n\tbuild | xcpretty"
+                  type: Run
+          platform:
+            os: MacOS
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec: {}
+        type: CI
+    - stage:
+        description: This stage runs when the previous stage completes successfully.
+        identifier: Finish
+        name: Finish
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - step:
+                  identifier: notify_slack
+                  name: Notify Slack
+                  template:
+                    templateRef: slacknotify
+                    versionLabel: v1
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+        type: CI
